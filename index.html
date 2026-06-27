@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Meeting AI Assistant</title>
+<style>
+  :root{
+    --bg:#14171c;
+    --panel:#1c2127;
+    --panel-line:#2a3038;
+    --ink:#ece8e1;
+    --ink-dim:#9aa1ab;
+    --amber:#e8a33d;
+    --teal:#4fa88f;
+    --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:48px 20px 80px;}
+
+  header{margin-bottom:36px;}
+  .tag{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.12em;
+    color:var(--amber);
+    text-transform:uppercase;
+  }
+  h1{
+    font-size:34px;
+    margin:8px 0 6px;
+    font-weight:700;
+    letter-spacing:-0.02em;
+  }
+  .sub{color:var(--ink-dim);font-size:15px;line-height:1.5;max-width:480px;}
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--panel-line);
+    border-radius:10px;
+    padding:28px;
+    margin-bottom:20px;
+  }
+  .panel h2{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--ink-dim);
+    margin:0 0 18px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .panel h2::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--teal);}
+
+  .drop{
+    border:1.5px dashed var(--panel-line);
+    border-radius:8px;
+    padding:36px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .drop:hover, .drop.drag{border-color:var(--amber);background:rgba(232,163,61,0.04);}
+  .drop p{margin:0;color:var(--ink-dim);font-size:14px;}
+  .drop .filename{color:var(--amber);font-family:var(--mono);font-size:13px;margin-top:8px;}
+  input[type=file]{display:none;}
+
+  .row{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  button{
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:14px;
+    border:none;
+    border-radius:7px;
+    padding:11px 20px;
+    cursor:pointer;
+    transition:opacity .15s ease, transform .05s ease;
+  }
+  button:active{transform:scale(0.98);}
+  button:disabled{opacity:.4;cursor:not-allowed;}
+  .btn-primary{background:var(--amber);color:#1a1306;}
+  .btn-primary:hover:not(:disabled){opacity:.88;}
+  .btn-ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--panel-line);}
+  .btn-ghost:hover{color:var(--ink);}
+
+  .key-field{margin-top:18px;}
+  .key-field label{display:block;font-size:12px;color:var(--ink-dim);margin-bottom:6px;}
+  .key-field input{
+    width:100%;
+    background:#10141a;
+    border:1px solid var(--panel-line);
+    border-radius:6px;
+    padding:10px 12px;
+    color:var(--ink);
+    font-family:var(--mono);
+    font-size:13px;
+  }
+  .key-field .hint{font-size:12px;color:var(--ink-dim);margin-top:6px;line-height:1.5;}
+
+  .status{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--teal);
+    margin-top:14px;
+    display:none;
+  }
+  .status.active{display:block;}
+  .status.error{color:#e35d5d;}
+
+  .result-block{margin-bottom:22px;}
+  .result-block:last-child{margin-bottom:0;}
+  .result-block .label{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:var(--amber);
+    margin-bottom:8px;
+  }
+  .result-block .content{
+    font-size:14.5px;
+    line-height:1.65;
+    color:var(--ink);
+    white-space:pre-wrap;
+  }
+  .action-items{margin:0;padding-left:20px;}
+  .action-items li{margin-bottom:6px;font-size:14.5px;line-height:1.5;}
+
+  .empty{color:var(--ink-dim);font-size:14px;font-style:italic;}
+
+  footer{
+    margin-top:40px;
+    font-family:var(--mono);
+    font-size:11px;
+    color:var(--ink-dim);
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="tag">Voice → Text → Insight</div>
+    <h1>Meeting AI Assistant</h1>
+    <p class="sub">Upload bản ghi âm cuộc họp. Hệ thống tự chuyển thành văn bản, dịch sang tiếng Việt, tóm tắt và liệt kê action items.</p>
+  </header>
+
+  <div class="panel">
+    <h2>Upload bản ghi</h2>
+    <div class="drop" id="dropZone">
+      <p>Kéo & thả file audio vào đây, hoặc bấm để chọn file</p>
+      <p style="font-size:12px;margin-top:6px;">Hỗ trợ MP3, WAV, M4A &middot; tối đa ~4MB (giới hạn của Vercel free tier)</p>
+      <div class="filename" id="filename"></div>
+    </div>
+    <input type="file" id="fileInput" accept="audio/*" />
+
+    <div class="row">
+      <button class="btn-primary" id="processBtn" disabled>Xử lý ghi âm</button>
+      <button class="btn-ghost" id="resetBtn">Xoá</button>
+    </div>
+
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Kết quả</h2>
+    <div id="results">
+      <p class="empty">Chưa có dữ liệu. Upload file và nhấn "Xử lý ghi âm" để bắt đầu.</p>
+    </div>
+  </div>
+
+  <footer>MeetSum demo &middot; built for SE coursework</footer>
+</div>
+
+<script>
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const filenameEl = document.getElementById('filename');
+const processBtn = document.getElementById('processBtn');
+const resetBtn = document.getElementById('resetBtn');
+const statusEl = document.getElementById('status');
+const resultsEl = document.getElementById('results');
+
+let currentFile = null;
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop', e => {
+  e.preventDefault();
+  dropZone.classList.remove('drag');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) setFile(e.target.files[0]);
+});
+
+function setFile(file){
+  currentFile = file;
+  filenameEl.textContent = file.name + ' (' + (file.size/1024/1024).toFixed(2) + ' MB)';
+  processBtn.disabled = false;
+}
+
+resetBtn.addEventListener('click', () => {
+  currentFile = null;
+  fileInput.value = '';
+  filenameEl.textContent = '';
+  processBtn.disabled = true;
+  statusEl.className = 'status';
+  statusEl.textContent = '';
+  resultsEl.innerHTML = '<p class="empty">Chưa có dữ liệu. Upload file và nhấn "Xử lý ghi âm" để bắt đầu.</p>';
+});
+
+function showStatus(text, isError){
+  statusEl.textContent = text;
+  statusEl.className = 'status active' + (isError ? ' error' : '');
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+processBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  processBtn.disabled = true;
+  showStatus('Đang chuyển giọng nói thành văn bản (Whisper)...');
+
+  try {
+    const base64 = await fileToBase64(currentFile);
+
+    const res = await fetch('/api/process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        audioBase64: base64,
+        mimeType: currentFile.type || 'audio/mpeg',
+        filename: currentFile.name
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok){
+      showStatus('Lỗi: ' + (data.error || 'Không xác định'), true);
+      processBtn.disabled = false;
+      return;
+    }
+
+    showStatus('Hoàn tất.');
+    renderResults(data);
+  } catch (err) {
+    showStatus('Lỗi kết nối: ' + err.message, true);
+  } finally {
+    processBtn.disabled = false;
+  }
+});
+
+function renderResults(data){
+  const items = (data.actionItems || []).map(i => '<li>' + escapeHtml(i) + '</li>').join('');
+  resultsEl.innerHTML = `
+    <div class="result-block">
+      <div class="label">Transcript (gốc)</div>
+      <div class="content">${escapeHtml(data.transcript || '')}</div>
+    </div>
+    <div class="result-block">
+      <div class="label">Bản dịch tiếng Việt</div>
+      <div class="content">${escapeHtml(data.translation || '')}</div>
+    </div>
+    <div class="result-block">
+      <div class="label">Tóm tắt</div>
+      <div class="content">${escapeHtml(data.summary || '')}</div>
+    </div>
+    <div class="result-block">
+      <div class="label">Action Items</div>
+      <ul class="action-items">${items || '<li class="empty">Không có</li>'}</ul>
+    </div>
+  `;
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>
